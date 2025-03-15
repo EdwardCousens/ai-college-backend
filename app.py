@@ -3,11 +3,19 @@ import openai
 import os
 
 app = Flask(__name__)
+
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+@app.route('/', methods=['GET'])
+def home():
+    return "🎉 Dream Ivy backend is live!"
 
 @app.route('/process_quiz', methods=['POST'])
 def process_quiz():
     data = request.get_json()
+
+    print("📥 Received data:", data)
+
 
     prompt = f"""Student Details:
     Marks: {data.get('marks')}
@@ -21,6 +29,7 @@ def process_quiz():
     """
 
     try:
+
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
@@ -32,3 +41,4 @@ def process_quiz():
 
 if __name__ == '__main__':
     app.run()
+
