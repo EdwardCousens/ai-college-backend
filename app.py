@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
+openai migrate
 import openai
+openai migrate
 import os
 
 app = Flask(__name__)
