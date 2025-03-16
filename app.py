@@ -30,7 +30,7 @@ def process_quiz():
           co_curriculars: submissionData["Co Curriculars (CC1, CC2 etc.)"] || "",
           resume: submissionData["Upload your Resume"] || "",
           other: submissionData["Other (Add any additional academic infomation)"] || "",
-          overseas: submissionData["Are you willing to study overseas"] || ""
+          overseas: submissionData["Are you willing to study overseas"] || "",
 Based on this, recommend 3-5 suitable colleges and give a brief summary of entry requirements for each.
 """
     try:
