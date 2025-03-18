@@ -16,30 +16,33 @@ def process_quiz():
     data = request.get_json()
     print("📥 Received data:", data)
 
-    # Build a prompt that includes all the fields
+    # Build a prompt using the data received from the frontend
     prompt = f"""Student Details:
-  school_stage: submissionData["Current school stage"] || "",
-          strongest_subjects: submissionData["Your strongest subjects, (Subject 1, Subjects 2)"] || "",
-          school_name: submissionData["School name"] || "",
-          college_degree: submissionData["Intended college degree"] || "",
-          SAT_score: submissionData["SAT score"] || "",
-          other_SAT: submissionData["I have/will take the SAT"] || "",
-          GPA: submissionData["GPA (GPA/Maximum GPA)"] || "",
-          other_GPA: submissionData["I do not have a GPA"] || "",
-          location: submissionData["Region of Studying"] || "",
-          co_curriculars: submissionData["Co Curriculars (CC1, CC2 etc.)"] || "",
-          resume: submissionData["Upload your Resume"] || "",
-          other: submissionData["Other (Add any additional academic infomation)"] || "",
-          overseas: submissionData["Are you willing to study overseas"] || "",
+School Stage: {data.get('school_stage', '')}
+Strongest Subjects: {data.get('strongest_subjects', '')}
+School Name: {data.get('school_name', '')}
+Intended College Degree: {data.get('college_degree', '')}
+SAT Score: {data.get('SAT_score', '')}
+Other SAT Info: {data.get('other_SAT', '')}
+GPA: {data.get('GPA', '')}
+Other GPA Info: {data.get('other_GPA', '')}
+Location: {data.get('location', '')}
+Co-curriculars: {data.get('co_curriculars', '')}
+Resume: {data.get('resume', '')}
+Other Info: {data.get('other', '')}
+Willing to Study Overseas: {data.get('overseas', '')}
+
 Based on this, recommend 3-5 suitable colleges and give a brief summary of entry requirements for each.
 """
+
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=500
         )
-        return jsonify({"recommendation": response.choices[0].message["content"]})
+        recommendation = response.choices[0].message["content"]
+        return jsonify({"recommendation": recommendation})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
