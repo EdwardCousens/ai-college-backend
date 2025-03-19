@@ -28,7 +28,6 @@ GPA: {data.get('GPA', '')}
 Other GPA Info: {data.get('other_GPA', '')}
 Location: {data.get('location', '')}
 Co-curriculars: {data.get('co_curriculars', '')}
-Resume: {data.get('resume', '')}
 Other Info: {data.get('other', '')}
 Willing to Study Overseas: {data.get('overseas', '')}
 
