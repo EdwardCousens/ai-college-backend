@@ -4,11 +4,12 @@ import os
 from flask_cors import CORS
 
 app = Flask(__name__)
-# Allow CORS for all domains (or restrict to your Squarespace domain if preferred)
-CORS(app)  # To allow all origins, or use CORS(app, origins=["https://sapphire-mandarin-p3wh.squarespace.com"])
 
-# Use your OpenAI API key from the environment variable
-openai.api_key = os.getenv("sk-proj-NL-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")
+# Enable CORS. You can restrict to your Squarespace domain if you prefer.
+CORS(app, origins=["https://sapphire-mandarin-p3wh.squarespace.com"])
+
+# Set your OpenAI API key via an environment variable (e.g., in Render)
+openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure OPENAI_API_KEY is set in your Render environment
 
 @app.route('/', methods=['GET'])
 def home():
@@ -46,6 +47,7 @@ Based on this, recommend 3-5 suitable colleges and give a brief summary of entry
         recommendation = response.choices[0].message["content"]
         return jsonify({"recommendation": recommendation})
     except Exception as e:
+        print("❌ Error from OpenAI:", str(e))
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
