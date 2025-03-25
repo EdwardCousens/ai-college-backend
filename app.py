@@ -1,15 +1,18 @@
 from flask import Flask, request, jsonify
 import openai
 import os
+import requests
 from flask_cors import CORS
 
 app = Flask(__name__)
 
-# Enable CORS. You can restrict to your Squarespace domain if you prefer.
+# Enable CORS (restrict origins if needed)
 CORS(app, origins=["https://sapphire-mandarin-p3wh.squarespace.com"])
 
-# Set your OpenAI API key via an environment variable (e.g., in Render)
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure OPENAI_API_KEY is set in your Render environment
+# Set your API keys from environment variables (do not hardcode them)
+openai.api_key = os.getenv("OPENAI_API_KEY")
+FILLOUT_API_KEY = os.getenv("FILLOUT_API_KEY")
+FORM_ID = os.getenv("FILLOUT_FORM_ID", "fbeCfp8LHDus")  # default to your form ID
 
 @app.route('/', methods=['GET'])
 def home():
@@ -17,38 +20,72 @@ def home():
 
 @app.route('/process_quiz', methods=['POST'])
 def process_quiz():
+    # Expect the client to send only the submission UUID
     data = request.get_json()
     print("📥 Received data:", data)
+    
+    submission_uuid = data.get("submissionUuid")
+    if not submission_uuid:
+        return jsonify({"error": "No submission UUID provided"}), 400
 
-    # Build a prompt using the data received from the frontend
+    # Build the Fillout API URL to fetch this submission
+    fillout_url = f"https://api.fillout.com/v1/api/forms/{FORM_ID}/submissions/{submission_uuid}"
+    headers = {"Authorization": f"Bearer {FILLOUT_API_KEY}"}
+
+    # Fetch submission from Fillout
+    fillout_response = requests.get(fillout_url, headers=headers)
+    if fillout_response.status_code != 200:
+        error_msg = f"Error fetching submission from Fillout: {fillout_response.status_code} {fillout_response.text}"
+        print("❌", error_msg)
+        return jsonify({"error": error_msg}), fillout_response.status_code
+
+    submission_data = fillout_response.json().get("submission", {})
+    print("📤 Submission data from Fillout:", submission_data)
+
+    # Process the submission data: extract answers from submission.questions
+    processed_data = {}
+    if submission_data.get("questions") and isinstance(submission_data["questions"], list):
+        for question in submission_data["questions"]:
+            processed_data[question["name"]] = question.get("value", "")
+    else:
+        print("⚠️ No questions found in submission.")
+
+    print("📤 Processed submissionData:", processed_data)
+
+    # Build the prompt for OpenAI using processed_data
     prompt = f"""Student Details:
-School Stage: {data.get('school_stage', '')}
-Strongest Subjects: {data.get('strongest_subjects', '')}
-School Name: {data.get('school_name', '')}
-Intended College Degree: {data.get('college_degree', '')}
-SAT Score: {data.get('SAT_score', '')}
-Other SAT Info: {data.get('other_SAT', '')}
-GPA: {data.get('GPA', '')}
-Other GPA Info: {data.get('other_GPA', '')}
-Location: {data.get('location', '')}
-Co-curriculars: {data.get('co_curriculars', '')}
-Resume: {data.get('resume', '')}
-Other Info: {data.get('other', '')}
-Willing to Study Overseas: {data.get('overseas', '')}
+School Stage: {processed_data.get('Current school stage', '')}
+Strongest Subjects: {processed_data.get('Your strongest subjects, (Subject 1, Subjects 2)', '')}
+School Name: {processed_data.get('School name', '')}
+Intended College Degree: {processed_data.get('Intended college degree', '')}
+SAT Score: {processed_data.get('SAT score', '')}
+Other SAT Info: {processed_data.get('I have/will take the SAT', '')}
+GPA: {processed_data.get('GPA (GPA/Maximum GPA)', '')}
+Other GPA Info: {processed_data.get('I do not have a GPA', '')}
+Location: {processed_data.get('Region of Studying', '')}
+Co-curriculars: {processed_data.get('Co Curriculars (CC1, CC2 etc.)', '')}
+Other Info: {processed_data.get('Other (Add any additional academic infomation)', '')}
+Willing to Study Overseas: {processed_data.get('Are you willing to study overseas', '')}
 
 Based on this, recommend 3-5 suitable colleges and give a brief summary of entry requirements for each.
 """
+
     try:
-        response = openai.ChatCompletion.create(
+        openai_response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=500
         )
-        recommendation = response.choices[0].message["content"]
+        recommendation = openai_response.choices[0].message["content"]
         return jsonify({"recommendation": recommendation})
     except Exception as e:
-        print("❌ Error from OpenAI:", str(e))
-        return jsonify({"error": str(e)}), 500
+        error_msg = f"Error calling OpenAI: {str(e)}"
+        print("❌", error_msg)
+        return jsonify({"error": error_msg}), 500
+
+if __name__ == '__main__':
+    app.run()
+
 
 if __name__ == '__main__':
     app.run()
