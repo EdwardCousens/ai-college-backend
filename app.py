@@ -5,14 +5,16 @@ import requests
 from flask_cors import CORS
 
 app = Flask(__name__)
-
-# Enable CORS (restrict origins if needed)
+# Allow CORS for your Squarespace domain
 CORS(app, origins=["https://sapphire-mandarin-p3wh.squarespace.com"])
 
-# Set your API keys from environment variables (do not hardcode them)
+# Set your API keys via environment variables
 openai.api_key = os.getenv("OPENAI_API_KEY")
 FILLOUT_API_KEY = os.getenv("FILLOUT_API_KEY")
-FORM_ID = os.getenv("FILLOUT_FORM_ID", "fbeCfp8LHDus")  # default to your form ID
+FORM_ID = os.getenv("FILLOUT_FORM_ID", "fbeCfp8LHDus")  # Ensure this is correct
+
+# Temporary debug: print your Fillout key (remove in production)
+print("FILLOUT_API_KEY:", FILLOUT_API_KEY)
 
 @app.route('/', methods=['GET'])
 def home():
@@ -20,19 +22,16 @@ def home():
 
 @app.route('/process_quiz', methods=['POST'])
 def process_quiz():
-    # Expect the client to send only the submission UUID
     data = request.get_json()
     print("📥 Received data:", data)
-    
+
     submission_uuid = data.get("submissionUuid")
     if not submission_uuid:
         return jsonify({"error": "No submission UUID provided"}), 400
 
-    # Build the Fillout API URL to fetch this submission
+    # Build the Fillout API URL
     fillout_url = f"https://api.fillout.com/v1/api/forms/{FORM_ID}/submissions/{submission_uuid}"
     headers = {"Authorization": f"Bearer {FILLOUT_API_KEY}"}
-
-    # Fetch submission from Fillout
     fillout_response = requests.get(fillout_url, headers=headers)
     if fillout_response.status_code != 200:
         error_msg = f"Error fetching submission from Fillout: {fillout_response.status_code} {fillout_response.text}"
@@ -42,7 +41,6 @@ def process_quiz():
     submission_data = fillout_response.json().get("submission", {})
     print("📤 Submission data from Fillout:", submission_data)
 
-    # Process the submission data: extract answers from submission.questions
     processed_data = {}
     if submission_data.get("questions") and isinstance(submission_data["questions"], list):
         for question in submission_data["questions"]:
@@ -52,7 +50,6 @@ def process_quiz():
 
     print("📤 Processed submissionData:", processed_data)
 
-    # Build the prompt for OpenAI using processed_data
     prompt = f"""Student Details:
 School Stage: {processed_data.get('Current school stage', '')}
 Strongest Subjects: {processed_data.get('Your strongest subjects, (Subject 1, Subjects 2)', '')}
@@ -79,9 +76,8 @@ Based on this, recommend 3-5 suitable colleges and give a brief summary of entry
         recommendation = openai_response.choices[0].message["content"]
         return jsonify({"recommendation": recommendation})
     except Exception as e:
-        error_msg = f"Error calling OpenAI: {str(e)}"
-        print("❌", error_msg)
-        return jsonify({"error": error_msg}), 500
+        print("❌ Error from OpenAI:", str(e))
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run()
