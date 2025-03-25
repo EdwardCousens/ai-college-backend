@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify
 import openai
 import os
+from flask_cors import CORS
 
 app = Flask(__name__)
+# Allow CORS for all domains (or restrict to your Squarespace domain if preferred)
+CORS(app)  # To allow all origins, or use CORS(app, origins=["https://sapphire-mandarin-p3wh.squarespace.com"])
 
 # Use your OpenAI API key from the environment variable
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("sk-proj-NL-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")
 
 @app.route('/', methods=['GET'])
 def home():
@@ -28,12 +31,12 @@ GPA: {data.get('GPA', '')}
 Other GPA Info: {data.get('other_GPA', '')}
 Location: {data.get('location', '')}
 Co-curriculars: {data.get('co_curriculars', '')}
+Resume: {data.get('resume', '')}
 Other Info: {data.get('other', '')}
 Willing to Study Overseas: {data.get('overseas', '')}
 
 Based on this, recommend 3-5 suitable colleges and give a brief summary of entry requirements for each.
 """
-
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
