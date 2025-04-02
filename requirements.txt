@@ -1,4 +1,0 @@
-flask
-openai==0.28
-flask-cors
-gunicorn
